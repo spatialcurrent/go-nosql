@@ -140,12 +140,12 @@ func (b *BackendMongoDB) UpdateItemById(table_name string, id string, values map
 
 func (b *BackendMongoDB) CreateTables(tables []Table) error {
 	for _, t := range tables {
-		b.CreateTable(t.Name, t.Indexes)
+		b.CreateTable(t.Name, t.Indexes, t.ReadUnits, t.WriteUnits)
 	}
 	return nil
 }
 
-func (b *BackendMongoDB) CreateTable(table_name string, indexes []string) error {
+func (b *BackendMongoDB) CreateTable(table_name string, indexes []string, readUnits int, writeUnits int) error {
 	// MongoDB tables are automatically created when adding the first item.
 	return nil
 }

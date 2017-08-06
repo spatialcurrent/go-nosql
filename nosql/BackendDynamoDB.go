@@ -1,9 +1,11 @@
 package nosql
 
 import (
+  "bytes"
   "errors"
   "log"
   "strings"
+  "time"
 )
 
 import (
@@ -27,19 +29,19 @@ func (b *BackendDynamoDB) Connect(options map[string]string) error {
 
   aws_access_key_id := options["AWSAccessKeyId"]
   aws_secret_access_key := options["AWSSecretAccessKey"]
-  aws_session_token := options["AWSSessionToken"]
+  //aws_session_token := options["AWSSessionToken"]
   aws_region := options["AWSDefaultRegion"]
   dynamodb_url := options["StorefrontDynamoDBUrl"]
 
   if strings.Contains(dynamodb_url, "localhost") {
     aws_access_key_id = "localhost"
     aws_secret_access_key = "localhost"
-    aws_session_token = "localhost"
+    //aws_session_token = "localhost"
   }
 
   aws_session := session.Must(session.NewSessionWithOptions(session.Options{
     Config: aws.Config{
-      Credentials: credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, aws_session_token),
+      Credentials: credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, ""),
       Endpoint: aws.String(dynamodb_url),
       MaxRetries: aws.Int(3),
       Region: aws.String(aws_region),
@@ -106,7 +108,7 @@ func (b *BackendDynamoDB) GetItemByAttributeValue(table_name string, attribute_n
 
   input := &dynamodb.QueryInput{
     TableName: aws.String(table_name),
-    IndexName: aws.String(attribute_name+"_index"),
+    IndexName: aws.String(attribute_name+"-index"),
     KeyConditionExpression: aws.String(attribute_name+" = :v"),
     ExpressionAttributeValues: eav,
   }
@@ -132,7 +134,7 @@ func (b *BackendDynamoDB) GetItemsByAttributeValue(table_name string, attribute_
 
   input := &dynamodb.QueryInput{
     TableName: aws.String(table_name),
-    IndexName: aws.String(attribute_name+"_index"),
+    IndexName: aws.String(attribute_name+"-index"),
     KeyConditionExpression: aws.String(attribute_name+" = :v"),
     ExpressionAttributeValues: eav,
   }
@@ -268,27 +270,99 @@ func (b *BackendDynamoDB) InsertItem(table_name string, item interface{}) error 
 }
 
 func (b *BackendDynamoDB) UpdateItemById(table_name string, id string, values map[string]interface{}) error {
-  return errors.New("Not implemented yet!")
+
+  valuesAsSlice := make([]struct{Key string; Value interface{}}, 0)
+  for k, v := range values {
+    valuesAsSlice = append(valuesAsSlice, struct{Key string; Value interface{}}{Key: k, Value: v})
+  }
+
+  ean := map[string]*string{}
+  for i, v := range valuesAsSlice {
+    var buf bytes.Buffer
+    buf.WriteRune(rune(97+i))
+    ean["#"+buf.String()] = aws.String(v.Key)
+  }
+
+  eav := map[string]*dynamodb.AttributeValue{}
+  for i, v := range valuesAsSlice {
+    var buf bytes.Buffer
+    buf.WriteRune(rune(97+i))
+    an := ":"+buf.String()
+    switch v.Value.(type) {
+    case string:
+        eav[an] = &dynamodb.AttributeValue{
+          S: aws.String(v.Value.(string)),
+        }
+    default:
+        log.Println("Error: Could not update item.")
+    }
+  }
+
+  attributesToSet := []string{}
+  attributesToRemove := []string{}
+
+  for i, v := range valuesAsSlice {
+    var buf bytes.Buffer
+    buf.WriteRune(rune(97+i))
+    an := buf.String()
+    switch v.Value.(type) {
+    case string:
+      if len(v.Value.(string)) > 0 {
+        attributesToSet = append(attributesToSet, an)
+      } else {
+        attributesToRemove = append(attributesToRemove, an)
+      }
+    default:
+        log.Println("Error: Could not update item.")
+    }
+  }
+  updateExpression := ""
+  if len(attributesToSet) > 0 {
+    parts := []string{}
+    for _, a := range attributesToSet {
+      parts = append(parts, "#" + a + " = :" + a)
+    }
+    updateExpression = updateExpression + "SET " +strings.Join(parts, ", ")
+  }
+  if len(attributesToRemove) > 0 {
+    if len(updateExpression) > 0 {
+      updateExpression = updateExpression + " "
+    }
+    updateExpression = updateExpression + "REMOVE " + strings.Join(attributesToRemove, ", ")
+  }
+
+  _, err := b.dynamodb_client.UpdateItem(&dynamodb.UpdateItemInput{
+    TableName: aws.String(table_name),
+    Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(id),
+			},
+		},
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: aws.String(updateExpression),
+  })
+
+  return err
 }
-
-
 
 func (b *BackendDynamoDB) CreateTables(tables []Table) error {
   var err error
 	for _, t := range tables {
-		err = b.CreateTable(t.Name, t.Indexes)
+		err = b.CreateTable(t.Name, t.Indexes, t.ReadUnits, t.WriteUnits)
     if err != nil {
       break
     }
+    time.Sleep(1000 * time.Millisecond)
 	}
 	return err
 }
 
-func (b *BackendDynamoDB) CreateTable(table_name string, indexes []string) error {
+func (b *BackendDynamoDB) CreateTable(table_name string, indexes []string, readUnits int, writeUnits int) error {
 
   pt := &dynamodb.ProvisionedThroughput{
-    ReadCapacityUnits: aws.Int64(400),
-    WriteCapacityUnits: aws.Int64(400),
+    ReadCapacityUnits: aws.Int64(int64(readUnits)),
+    WriteCapacityUnits: aws.Int64(int64(writeUnits)),
   }
 
   ad := []*dynamodb.AttributeDefinition{
@@ -303,7 +377,7 @@ func (b *BackendDynamoDB) CreateTable(table_name string, indexes []string) error
         AttributeType: aws.String("S"),
       })
       gsi = append(gsi, &dynamodb.GlobalSecondaryIndex{
-        IndexName: aws.String(index+"_index"),
+        IndexName: aws.String(index+"-index"),
         KeySchema: []*dynamodb.KeySchemaElement{
           &dynamodb.KeySchemaElement{AttributeName: aws.String(index), KeyType: aws.String("HASH")},
         },
@@ -366,15 +440,36 @@ func (b *BackendDynamoDB) DeleteTables(table_names []string) error {
 }
 
 func (b *BackendDynamoDB) DeleteTable(table_name string) error {
-  input := &dynamodb.DeleteTableInput{
-    TableName: aws.String(table_name),
-  }
 
-  _, err := b.dynamodb_client.DeleteTable(input)
+  _, err := b.dynamodb_client.DeleteTable(&dynamodb.DeleteTableInput{
+    TableName: aws.String(table_name),
+  })
+
   if err != nil {
     return err
   }
 
-  return nil
+  for true {
+    result, err := b.dynamodb_client.DescribeTable(&dynamodb.DescribeTableInput{
+      TableName: aws.String(table_name),
+    })
+    if err != nil {
+      if aerr, ok := err.(awserr.Error); ok {
+        switch aerr.Code() {
+        case dynamodb.ErrCodeResourceNotFoundException:
+          return nil
+        default:
+          return err
+        }
+      } else {
+        return err
+      }
+    }
+    if *result.Table.TableStatus != "DELETING" {
+      return errors.New("Error: DynamoDB Table should have status DELETING.")
+    }
+    time.Sleep(1000 * time.Millisecond)
+  }
 
+  return nil
 }

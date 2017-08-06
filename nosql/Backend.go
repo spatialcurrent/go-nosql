@@ -4,7 +4,7 @@ type Backend interface {
   Type() string
   Connect(map[string]string) error
   CreateTables(tables []Table) error
-  CreateTable(table_name string, indexes []string) error
+  CreateTable(table_name string, indexes []string, readUnits int, writeUnits int) error
   DeleteTables(table_names []string) error
   DeleteTable(table_name string) error
   GetItems(table_name string, sort_fields []string, item interface{}) error

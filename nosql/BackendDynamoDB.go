@@ -101,6 +101,10 @@ func (b *BackendDynamoDB) GetItemsByIds(table_name string, ids []string, sort_fi
 
 
 func (b *BackendDynamoDB) GetItemByAttributeValue(table_name string, attribute_name string, attribute_value string, item interface{}) error {
+
+  ean := map[string]*string{}
+  ean["#a"] = aws.String(attribute_name)
+
   eav := map[string]*dynamodb.AttributeValue{}
 	eav[":v"] = &dynamodb.AttributeValue{
 		S: aws.String(attribute_value),
@@ -109,7 +113,8 @@ func (b *BackendDynamoDB) GetItemByAttributeValue(table_name string, attribute_n
   input := &dynamodb.QueryInput{
     TableName: aws.String(table_name),
     IndexName: aws.String(attribute_name+"-index"),
-    KeyConditionExpression: aws.String(attribute_name+" = :v"),
+    KeyConditionExpression: aws.String("#a = :v"),
+    ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
   }
 
@@ -127,6 +132,10 @@ func (b *BackendDynamoDB) GetItemByAttributeValue(table_name string, attribute_n
 }
 
 func (b *BackendDynamoDB) GetItemsByAttributeValue(table_name string, attribute_name string, attribute_value string, sort_fields []string, items interface{}) error {
+
+  ean := map[string]*string{}
+  ean["#a"] = aws.String(attribute_name)
+
 	eav := map[string]*dynamodb.AttributeValue{}
 	eav[":v"] = &dynamodb.AttributeValue{
 		S: aws.String(attribute_value),
@@ -135,7 +144,8 @@ func (b *BackendDynamoDB) GetItemsByAttributeValue(table_name string, attribute_
   input := &dynamodb.QueryInput{
     TableName: aws.String(table_name),
     IndexName: aws.String(attribute_name+"-index"),
-    KeyConditionExpression: aws.String(attribute_name+" = :v"),
+    KeyConditionExpression: aws.String("#a = :v"),
+    ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
   }
 
@@ -213,15 +223,20 @@ func (b *BackendDynamoDB) RemoveItemByAttributeValue(table_name string, attribut
 
 func (b *BackendDynamoDB) RemoveItemsByAttributeValue(table_name string, attribute_name string, attribute_value string) error {
 
+  ean := map[string]*string{}
+  ean["#a"] = aws.String(attribute_name)
+
   eav := map[string]*dynamodb.AttributeValue{}
-	eav[attribute_name] = &dynamodb.AttributeValue{
-		S: aws.String(attribute_value),
-	}
+  eav[":v"] = &dynamodb.AttributeValue{
+    S: aws.String(attribute_value),
+  }
 
   input := &dynamodb.QueryInput{
     TableName: aws.String(table_name),
+    IndexName: aws.String(attribute_name+"-index"),
+    ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    KeyConditionExpression: aws.String(attribute_name+" = :"+attribute_name),
+    KeyConditionExpression: aws.String("#a = :v"),
   }
 
 	result, err := b.dynamodb_client.Query(input)

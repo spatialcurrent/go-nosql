@@ -33,46 +33,46 @@ func main() {
 	var AWSAccessKeyId string
 	var AWSSecretAccessKey string
 	var DynamoDBUrl string
-  var basepath string
-  var table_name string
+	var basepath string
+	var table_name string
 	var recursive bool
 	var verbose bool
-  var dry_run bool
+	var dry_run bool
 	var version bool
 	var help bool
 
-  flag.StringVar(&backend_type, "backend", "dynamodb", "NoSQL backend type: dynamodb or mongodb.")
-  flag.StringVar(&AWSDefaultRegion, "aws_default_region", os.Getenv("AWS_DEFAULT_REGION"), "Defaults to value of environment variable AWS_DEFAULT_REGION.")
+	flag.StringVar(&backend_type, "backend", "dynamodb", "NoSQL backend type: dynamodb or mongodb.")
+	flag.StringVar(&AWSDefaultRegion, "aws_default_region", os.Getenv("AWS_DEFAULT_REGION"), "Defaults to value of environment variable AWS_DEFAULT_REGION.")
 	flag.StringVar(&AWSAccessKeyId, "aws_access_key_id", os.Getenv("AWS_ACCESS_KEY_ID"), "Defaults to value of environment variable AWS_ACCESS_KEY_ID")
 	flag.StringVar(&AWSSecretAccessKey, "aws_secret_access_key", os.Getenv("AWS_SECRET_ACCESS_KEY"), "Defaults to value of environment variable AWS_SECRET_ACCESS_KEY.")
 	flag.StringVar(&DynamoDBUrl, "dynamodb_url", "", "Defaults to AWS instance.")
 	flag.StringVar(&basepath, "basepath", "", "Path to folder containing objects to import.")
-  flag.StringVar(&table_name, "table", "", "Table name.")
+	flag.StringVar(&table_name, "table", "", "Table name.")
 	flag.BoolVar(&recursive, "recursive", false, "Recursive search within folder.")
-  flag.BoolVar(&verbose, "verbose", false, "Provide verbose output")
-  flag.BoolVar(&dry_run, "dry_run", false, "Connect to destination, but don't import any data.")
+	flag.BoolVar(&verbose, "verbose", false, "Provide verbose output")
+	flag.BoolVar(&dry_run, "dry_run", false, "Connect to destination, but don't import any data.")
 	flag.BoolVar(&version, "version", false, "Version")
 	flag.BoolVar(&help, "help", false, "Print help")
 
-  flag.Parse()
+	flag.Parse()
 
 	if help {
-		fmt.Println("Usage: nosql-importer -basepath BASEPATH -table TABLE_NAME [-recursive]")
-		flag.PrintDefaults()
-		os.Exit(0)
+	  fmt.Println("Usage: nosql-importer -basepath BASEPATH -table TABLE_NAME [-recursive]")
+	  flag.PrintDefaults()
+	  os.Exit(0)
 	} else if len(os.Args) == 1 {
-		fmt.Println("Error: Provided no arguments.")
-		fmt.Println("Run \"nosql-importer --help\" for more information.")
-		os.Exit(0)
+	  fmt.Println("Error: Provided no arguments.")
+	  fmt.Println("Run \"nosql-importer --help\" for more information.")
+	  os.Exit(0)
 	} else if flag.NArg() > 0 {
-		fmt.Println("Error: Provided extra command line arguments:", strings.Join(flag.Args(),", "))
-		fmt.Println("Run \"nosql-importer --help\" for more information.")
-		os.Exit(0)
+	  fmt.Println("Error: Provided extra command line arguments:", strings.Join(flag.Args(),", "))
+	  fmt.Println("Run \"nosql-importer --help\" for more information.")
+	  os.Exit(0)
 	}
 
 	if version {
-		fmt.Println(NOSQL_IMPORTER_VERSION)
-		os.Exit(0)
+	  fmt.Println(NOSQL_IMPORTER_VERSION)
+	  os.Exit(0)
 	}
 
 	logrus.SetFormatter(&logrus.TextFormatter{ForceColors: true})
@@ -81,18 +81,18 @@ func main() {
 	var log = logrus.New()
 
 	if verbose {
-    log.Println(chalk.Green, "Collecting filepaths from ", basepath, ".", chalk.Reset)
-  }
+		log.Println(chalk.Green, "Collecting filepaths from ", basepath, ".", chalk.Reset)
+	}
 
-  filepaths, err := collector.CollectFilepaths(basepath, []string{"json", "yaml", "yml"}, false, []string{})
+	filepaths, err := collector.CollectFilepaths(basepath, []string{"json", "yaml", "yml"}, false, []string{})
 	if err != nil {
 		log.Println(chalk.Red, err, chalk.Reset)
 		os.Exit(1)
 	}
 
-  if verbose {
-    log.Println(chalk.Green, "Objects:", filepaths, chalk.Reset)
-  }
+	if verbose {
+		log.Println(chalk.Green, "Objects:", filepaths, chalk.Reset)
+	}
 
   if dry_run {
     os.Exit(1)

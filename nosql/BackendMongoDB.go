@@ -10,9 +10,9 @@ import (
 )
 
 type BackendMongoDB struct {
-	mongodb_session *mgo.Session
+	mongodb_session       *mgo.Session
 	mongodb_database_name string
-	limit int
+	limit                 int
 }
 
 func (b *BackendMongoDB) Type() string {
@@ -35,7 +35,7 @@ func (b *BackendMongoDB) Connect(options map[string]string) error {
 	return nil
 }
 
-func (b *BackendMongoDB) GetCollection(collection_name string) (*mgo.Collection) {
+func (b *BackendMongoDB) GetCollection(collection_name string) *mgo.Collection {
 	return b.mongodb_session.DB(b.mongodb_database_name).C(collection_name)
 }
 
@@ -57,15 +57,15 @@ func (b *BackendMongoDB) GetItemsByIds(table_name string, ids []string, sort_fie
 	return err
 }
 
-func (b *BackendMongoDB) GetItemByAttributeValue(table_name string, attribute_name string, attribute_value string, item interface{}) (error) {
-  c := b.GetCollection(table_name)
-  q := bson.M{}
-  q[attribute_name] = attribute_value
-  err := c.Find(q).One(item)
-  return err
+func (b *BackendMongoDB) GetItemByAttributeValue(table_name string, attribute_name string, attribute_value string, item interface{}) error {
+	c := b.GetCollection(table_name)
+	q := bson.M{}
+	q[attribute_name] = attribute_value
+	err := c.Find(q).One(item)
+	return err
 }
 
-func (b *BackendMongoDB) GetItemsByAttributeValue(table_name string, attribute_name string, attribute_value string, sort_fields []string, items interface{}) (error) {
+func (b *BackendMongoDB) GetItemsByAttributeValue(table_name string, attribute_name string, attribute_value string, sort_fields []string, items interface{}) error {
 	c := b.GetCollection(table_name)
 	q := bson.M{}
 	q[attribute_name] = attribute_value
@@ -75,11 +75,11 @@ func (b *BackendMongoDB) GetItemsByAttributeValue(table_name string, attribute_n
 	} else {
 		iter = c.Find(q).Limit(b.limit).Iter()
 	}
-  err := iter.All(items)
-  return err
+	err := iter.All(items)
+	return err
 }
 
-func (b *BackendMongoDB) GetItems(table_name string, sort_fields []string, items interface{}) (error) {
+func (b *BackendMongoDB) GetItems(table_name string, sort_fields []string, items interface{}) error {
 	c := b.GetCollection(table_name)
 	var iter *mgo.Iter
 	if len(sort_fields) > 0 {
@@ -87,8 +87,8 @@ func (b *BackendMongoDB) GetItems(table_name string, sort_fields []string, items
 	} else {
 		iter = c.Find(nil).Limit(b.limit).Iter()
 	}
-  err := iter.All(items)
-  return err
+	err := iter.All(items)
+	return err
 }
 
 func (b *BackendMongoDB) RemoveItemById(table_name string, id string) error {

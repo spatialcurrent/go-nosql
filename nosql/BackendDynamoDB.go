@@ -31,7 +31,7 @@ func (b *BackendDynamoDB) Connect(options map[string]string) error {
   aws_secret_access_key := options["AWSSecretAccessKey"]
   //aws_session_token := options["AWSSessionToken"]
   aws_region := options["AWSDefaultRegion"]
-  dynamodb_url := options["StorefrontDynamoDBUrl"]
+  dynamodb_url := options["DynamoDBUrl"]
 
   if strings.Contains(dynamodb_url, "localhost") {
     aws_access_key_id = "localhost"
@@ -123,10 +123,12 @@ func (b *BackendDynamoDB) GetItemByAttributeValue(table_name string, attribute_n
 		return err
 	}
 
-  err = dynamodbattribute.UnmarshalMap(result.Items[0], item)
-	if err != nil {
-		return err
-	}
+  if len(result.Items) > 0 {
+    err = dynamodbattribute.UnmarshalMap(result.Items[0], item)
+  	if err != nil {
+  		return err
+  	}
+  }
 
 	return nil
 }

@@ -1,20 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
-	"os"
-	"time"
-	"strings"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"os"
+	"strings"
+	"time"
 )
 
 import (
-	"gopkg.in/yaml.v2"
 	"github.com/mattn/go-colorable"
 	"github.com/sirupsen/logrus"
 	"github.com/ttacon/chalk"
+	"gopkg.in/yaml.v2"
 )
 
 import (
@@ -26,7 +26,7 @@ var NOSQL_IMPORTER_VERSION = "0.0.1"
 
 func main() {
 
-  start := time.Now()
+	start := time.Now()
 
 	var backend_type string
 	var AWSDefaultRegion string
@@ -57,22 +57,22 @@ func main() {
 	flag.Parse()
 
 	if help {
-	  fmt.Println("Usage: nosql-importer -basepath BASEPATH -table TABLE_NAME [-recursive]")
-	  flag.PrintDefaults()
-	  os.Exit(0)
+		fmt.Println("Usage: nosql-importer -basepath BASEPATH -table TABLE_NAME [-recursive]")
+		flag.PrintDefaults()
+		os.Exit(0)
 	} else if len(os.Args) == 1 {
-	  fmt.Println("Error: Provided no arguments.")
-	  fmt.Println("Run \"nosql-importer --help\" for more information.")
-	  os.Exit(0)
+		fmt.Println("Error: Provided no arguments.")
+		fmt.Println("Run \"nosql-importer --help\" for more information.")
+		os.Exit(0)
 	} else if flag.NArg() > 0 {
-	  fmt.Println("Error: Provided extra command line arguments:", strings.Join(flag.Args(),", "))
-	  fmt.Println("Run \"nosql-importer --help\" for more information.")
-	  os.Exit(0)
+		fmt.Println("Error: Provided extra command line arguments:", strings.Join(flag.Args(), ", "))
+		fmt.Println("Run \"nosql-importer --help\" for more information.")
+		os.Exit(0)
 	}
 
 	if version {
-	  fmt.Println(NOSQL_IMPORTER_VERSION)
-	  os.Exit(0)
+		fmt.Println(NOSQL_IMPORTER_VERSION)
+		os.Exit(0)
 	}
 
 	logrus.SetFormatter(&logrus.TextFormatter{ForceColors: true})
@@ -94,36 +94,36 @@ func main() {
 		log.Println(chalk.Green, "Objects:", filepaths, chalk.Reset)
 	}
 
-  if dry_run {
-    os.Exit(1)
-  }
+	if dry_run {
+		os.Exit(1)
+	}
 
-  if len(table_name) == 0 {
+	if len(table_name) == 0 {
 		log.Println(chalk.Red, "Missing table name.  Use -table on command line.", chalk.Reset)
 		os.Exit(1)
 	}
 
 	backend, err := nosql.ConnectToBackend(backend_type, map[string]string{
-		"AWSDefaultRegion": AWSDefaultRegion,
-		"AWSAccessKeyId": AWSAccessKeyId,
+		"AWSDefaultRegion":   AWSDefaultRegion,
+		"AWSAccessKeyId":     AWSAccessKeyId,
 		"AWSSecretAccessKey": AWSSecretAccessKey,
-		"DynamoDBUrl": DynamoDBUrl,
+		"DynamoDBUrl":        DynamoDBUrl,
 	})
 	if err != nil {
 		log.Println(chalk.Red, err, chalk.Reset)
 		os.Exit(1)
 	}
 
-  if len(filepaths) > 0 {
-    for _ , f := range filepaths {
-      buf := make([]byte, 0)
-      buf, err := ioutil.ReadFile(f)
-      if err != nil {
-        log.Println(chalk.Red, "Error: Could not open file for object from path ", f, ".", chalk.Reset)
-        continue
-      }
+	if len(filepaths) > 0 {
+		for _, f := range filepaths {
+			buf := make([]byte, 0)
+			buf, err := ioutil.ReadFile(f)
+			if err != nil {
+				log.Println(chalk.Red, "Error: Could not open file for object from path ", f, ".", chalk.Reset)
+				continue
+			}
 
-      newObject := map[string]interface{}{}
+			newObject := map[string]interface{}{}
 
 			if strings.HasSuffix(f, ".json") {
 				err := json.Unmarshal(buf, &newObject)
@@ -141,15 +141,15 @@ func main() {
 				}
 			}
 
-      err = (*backend).InsertItem(table_name, &newObject)
-      if err != nil {
-        log.Println(chalk.Red, err, chalk.Reset)
-      }
+			err = (*backend).InsertItem(table_name, &newObject)
+			if err != nil {
+				log.Println(chalk.Red, err, chalk.Reset)
+			}
 
-    }
-  }
+		}
+	}
 
 	elapsed := time.Since(start)
-	log.Info("Done in "+elapsed.String())
+	log.Info("Done in " + elapsed.String())
 
 }

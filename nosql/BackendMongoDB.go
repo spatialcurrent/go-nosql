@@ -79,7 +79,7 @@ func (b *BackendMongoDB) GetItemsByAttributeValue(table_name string, attribute_n
 	return err
 }
 
-func (b *BackendMongoDB) GetItems(table_name string, sort_fields []string, items interface{}) error {
+func (b *BackendMongoDB) GetItems(table_name string, index_name string, sort_fields []string, items interface{}) error {
 	c := b.GetCollection(table_name)
 	var iter *mgo.Iter
 	if len(sort_fields) > 0 {

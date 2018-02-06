@@ -7,7 +7,7 @@ type Backend interface {
 	CreateTable(table_name string, indexes []string, readUnits int, writeUnits int) error
 	DeleteTables(table_names []string) error
 	DeleteTable(table_name string) error
-	GetItems(table_name string, sort_fields []string, item interface{}) error
+	GetItems(table_name string, index_name string, sort_fields []string, item interface{}) error
 	GetItemById(table_name string, id string, item interface{}) error
 	GetItemsByIds(table_name string, ids []string, sort_fields []string, items interface{}) error
 	GetItemByAttributeValue(table_name string, attribute_name string, attribute_value string, item interface{}) error

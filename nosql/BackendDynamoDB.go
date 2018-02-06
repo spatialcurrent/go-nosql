@@ -163,10 +163,12 @@ func (b *BackendDynamoDB) GetItemsByAttributeValue(table_name string, attribute_
 	return nil
 }
 
-func (b *BackendDynamoDB) GetItems(table_name string, sort_fields []string, items interface{}) error {
+func (b *BackendDynamoDB) GetItems(table_name string, index_name string, sort_fields []string, items interface{}) error {
 	input := &dynamodb.ScanInput{
 		TableName: aws.String(table_name),
-		//KeyConditionExpression: aws.String(""),
+	}
+	if len(index_name) > 0 {
+		input.IndexName = aws.String(index_name)
 	}
 
 	result, err := b.dynamodb_client.Scan(input)
@@ -174,10 +176,9 @@ func (b *BackendDynamoDB) GetItems(table_name string, sort_fields []string, item
 		return err
 	}
 
-	export := items.(*[]interface{})
-
-	for _, item := range result.Items {
-		*export = append(*export, item)
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, items)
+	if err != nil {
+		return err
 	}
 
 	return nil
